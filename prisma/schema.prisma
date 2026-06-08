@@ -18,6 +18,7 @@ model Produto {
   disponivel       Boolean  @default(true)
   emPromocao       Boolean  @default(false)
   precoPromocional Float?
+  estoque          Int?     // null = estoque ilimitado
   criadoEm         DateTime @default(now())
   atualizadoEm     DateTime @updatedAt
 

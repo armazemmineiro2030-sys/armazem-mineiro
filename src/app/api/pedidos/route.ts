@@ -50,6 +50,17 @@ export async function POST(request: Request) {
       );
     }
 
+    // Verifica estoque disponível
+    for (const item of itens) {
+      const produto = produtos.find((p) => p.id === item.produtoId)!;
+      if (produto.estoque !== null && produto.estoque < item.quantidade) {
+        return NextResponse.json(
+          { error: `Estoque insuficiente para "${produto.nome}". Disponível: ${produto.estoque}` },
+          { status: 400 }
+        );
+      }
+    }
+
     let total = 0;
     const itensComPreco = itens.map((item) => {
       const produto = produtos.find((p) => p.id === item.produtoId)!;
@@ -106,6 +117,19 @@ export async function POST(request: Request) {
         itens: { include: { produto: true } },
       },
     });
+
+    // Deduz estoque dos produtos com estoque controlado
+    await Promise.all(
+      itens.map((item) => {
+        const produto = produtos.find((p) => p.id === item.produtoId)!;
+        if (produto.estoque !== null) {
+          return prisma.produto.update({
+            where: { id: produto.id },
+            data: { estoque: { decrement: item.quantidade } },
+          });
+        }
+      }).filter(Boolean)
+    );
 
     return NextResponse.json(pedido, { status: 201 });
   } catch (error) {

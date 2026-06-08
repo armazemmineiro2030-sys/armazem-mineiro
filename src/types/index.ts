@@ -9,6 +9,7 @@ export interface Produto {
   disponivel: boolean;
   emPromocao: boolean;
   precoPromocional?: number | null;
+  estoque?: number | null;
 }
 
 export interface ItemCarrinho {
