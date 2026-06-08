@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($env:PATH = \"C:\\\\Users\\\\julia\\\\AppData\\\\Local\\\\claude-cli-nodejs;\" + $env:PATH; node --version 2>&1)"
+    ]
+  }
+}

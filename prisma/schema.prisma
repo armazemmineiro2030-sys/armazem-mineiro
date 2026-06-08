@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Produto {
+  id               String   @id @default(cuid())
+  nome             String
+  descricao        String
+  categoria        String
+  preco            Float
+  unidade          String
+  imagem           String?
+  disponivel       Boolean  @default(true)
+  emPromocao       Boolean  @default(false)
+  precoPromocional Float?
+  criadoEm         DateTime @default(now())
+  atualizadoEm     DateTime @updatedAt
+
+  itensPedido    ItemPedido[]
+  ingredientes   Ingrediente[]
+}
+
+model Cliente {
+  id          String   @id @default(cuid())
+  nome        String
+  telefone    String   @unique
+  cpfHash     String
+  endereco    String?
+  criadoEm   DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  pedidos Pedido[]
+}
+
+model Pedido {
+  id           String      @id @default(cuid())
+  clienteId    String
+  nomeCliente  String
+  telefone     String
+  tipo         String      // "entrega" | "retirada"
+  endereco     String?
+  observacoes  String?
+  total        Float
+  status       String      @default("aprovacao") // aprovacao | separacao | pronto | finalizado
+  criadoEm    DateTime    @default(now())
+  atualizadoEm DateTime   @updatedAt
+
+  cliente Cliente  @relation(fields: [clienteId], references: [id])
+  itens   ItemPedido[]
+}
+
+model ItemPedido {
+  id         String  @id @default(cuid())
+  pedidoId   String
+  produtoId  String
+  nomeProduto String
+  quantidade Float
+  precoUnit  Float
+
+  pedido  Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  produto Produto @relation(fields: [produtoId], references: [id])
+}
+
+model Receita {
+  id          String   @id @default(cuid())
+  titulo      String
+  imagem      String?
+  modoPreparo String
+  criadoEm   DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  ingredientes Ingrediente[]
+}
+
+model Ingrediente {
+  id        String @id @default(cuid())
+  receitaId String
+  produtoId String
+
+  receita Receita @relation(fields: [receitaId], references: [id], onDelete: Cascade)
+  produto Produto @relation(fields: [produtoId], references: [id])
+
+  @@unique([receitaId, produtoId])
+}
+
+model UsuarioEquipe {
+  id       String @id @default(cuid())
+  email    String @unique
+  nome     String
+  senhaHash String
+  criadoEm DateTime @default(now())
+}
