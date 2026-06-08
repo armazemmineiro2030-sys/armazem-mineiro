@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Produto } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { PageLoading } from "@/components/ui/Loading";
@@ -28,6 +28,8 @@ export default function ProdutosEquipePage() {
   const [editando, setEditando] = useState<Produto | null>(null);
   const [form, setForm] = useState<Partial<Produto>>(VAZIO);
   const [salvando, setSalvando] = useState(false);
+  const [uploadando, setUploadando] = useState(false);
+  const inputFileRef = useRef<HTMLInputElement>(null);
 
   async function carregar() {
     const data = await fetch("/api/equipe/produtos").then((r) => r.json());
@@ -47,6 +49,22 @@ export default function ProdutosEquipePage() {
     setEditando(p);
     setForm(p);
     setModalOpen(true);
+  }
+
+  function handleArquivo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Imagem muito grande. Use até 2 MB.");
+      return;
+    }
+    setUploadando(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setForm((f) => ({ ...f, imagem: reader.result as string }));
+      setUploadando(false);
+    };
+    reader.readAsDataURL(file);
   }
 
   async function salvar() {
@@ -102,12 +120,23 @@ export default function ProdutosEquipePage() {
         {produtos.map((p) => (
           <div key={p.id} className="bg-white rounded-2xl border border-marrom-100 shadow-sm overflow-hidden">
             <div className="px-4 py-3 flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <div className="text-xs text-musgo-600 font-semibold uppercase">{p.categoria}</div>
-                <h3 className="font-bold text-marrom-900 truncate">{p.nome}</h3>
-                <p className="text-sm text-marrom-600 line-clamp-1">{p.descricao}</p>
+              <div className="flex items-start gap-3 min-w-0">
+                {/* Miniatura */}
+                <div className="w-12 h-12 rounded-lg bg-marrom-50 border border-marrom-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                  {p.imagem ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.imagem} alt={p.nome} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xl">🏺</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs text-musgo-600 font-semibold uppercase">{p.categoria}</div>
+                  <h3 className="font-bold text-marrom-900 truncate">{p.nome}</h3>
+                  <p className="text-sm text-marrom-600 line-clamp-1">{p.descricao}</p>
+                </div>
               </div>
-              <div className="flex gap-1 flex-shrink-0">
+              <div className="flex gap-1 flex-shrink-0 ml-auto">
                 <button
                   onClick={() => abrirEditar(p)}
                   className="text-marrom-500 hover:text-marrom-800 p-1"
@@ -168,9 +197,54 @@ export default function ProdutosEquipePage() {
               <input type="number" step="0.01" value={form.precoPromocional || ""} onChange={(e) => setForm((f) => ({ ...f, precoPromocional: e.target.value ? Number(e.target.value) : undefined }))} className="input-field" />
             </div>
           </div>
+          {/* Upload de imagem */}
           <div>
-            <label className="label">URL da imagem</label>
-            <input type="url" value={form.imagem || ""} onChange={(e) => setForm((f) => ({ ...f, imagem: e.target.value }))} placeholder="https://..." className="input-field" />
+            <label className="label">Imagem do produto</label>
+            <div className="flex items-start gap-3">
+              {/* Preview */}
+              <div
+                className="w-20 h-20 rounded-xl border-2 border-dashed border-marrom-200 flex items-center justify-center bg-marrom-50 flex-shrink-0 overflow-hidden cursor-pointer hover:border-terracota-400 transition-colors"
+                onClick={() => inputFileRef.current?.click()}
+                title="Clique para escolher foto"
+              >
+                {form.imagem ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={form.imagem} alt="preview" className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-2xl">📷</span>
+                )}
+              </div>
+              <div className="flex-1 space-y-2">
+                <input
+                  ref={inputFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleArquivo}
+                />
+                <button
+                  type="button"
+                  onClick={() => inputFileRef.current?.click()}
+                  disabled={uploadando}
+                  className="w-full border-2 border-dashed border-marrom-200 hover:border-terracota-400 text-marrom-600 hover:text-terracota-600 py-2 px-3 rounded-xl text-sm font-semibold transition-colors"
+                >
+                  {uploadando ? "Carregando..." : "📁 Escolher foto do PC"}
+                </button>
+                {form.imagem && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForm((f) => ({ ...f, imagem: "" }));
+                      if (inputFileRef.current) inputFileRef.current.value = "";
+                    }}
+                    className="w-full text-xs text-red-500 hover:text-red-700"
+                  >
+                    Remover imagem
+                  </button>
+                )}
+                <p className="text-xs text-marrom-400">JPG, PNG ou WebP · máx 2 MB</p>
+              </div>
+            </div>
           </div>
           <div className="flex gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
